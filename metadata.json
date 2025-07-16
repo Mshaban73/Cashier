@@ -1,0 +1,6 @@
+{
+  "name": "Shaban Trading Treasury System",
+  "description": "A comprehensive treasury management system for Shaban Trading Corporation, featuring transaction logging, cash counting, and detailed financial reporting for shipping accounts. All data is stored locally in your browser.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
