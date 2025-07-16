@@ -257,11 +257,13 @@ type CashCountModalProps = {
     isOpen: boolean;
     onClose: () => void;
     systemBalance: number;
+    counts: Record<number, number>;
+    setCounts: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+    onSaveAdjustment: (difference: number, totalCash: number) => void;
 };
 
-const CashCountModal = ({ isOpen, onClose, systemBalance }: CashCountModalProps) => {
-    const [counts, setCounts] = useState<Record<number, number>>({});
-
+const CashCountModal = ({ isOpen, onClose, systemBalance, counts, setCounts, onSaveAdjustment }: CashCountModalProps) => {
+    
     const handleCountChange = (denom: number, count: string) => {
         setCounts(prev => ({ ...prev, [denom]: parseInt(count) || 0 }));
     };
@@ -277,12 +279,6 @@ const CashCountModal = ({ isOpen, onClose, systemBalance }: CashCountModalProps)
         if (difference < 0) return { text: `عجز ${formatCurrency(Math.abs(difference))}`, color: 'text-red-400' };
         return { text: `زيادة ${formatCurrency(difference)}`, color: 'text-yellow-400' };
     };
-    
-    useEffect(() => {
-        if (isOpen) {
-            setCounts({});
-        }
-    }, [isOpen]);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="جرد الخزينة (الدرج)">
@@ -306,7 +302,13 @@ const CashCountModal = ({ isOpen, onClose, systemBalance }: CashCountModalProps)
                     <div className="flex justify-between"><span>إجمالي النقدية:</span> <span className="font-bold">{formatCurrency(totalCash)}</span></div>
                     <div className="flex justify-between"><span>رصيد النظام:</span> <span className="font-bold">{formatCurrency(systemBalance)}</span></div>
                     <div className={`flex justify-between font-bold ${getStatus().color}`}><span>الفرق:</span> <span>{getStatus().text}</span></div>
-                    {difference !== 0 && <p className="text-center text-orange-400 pt-4">راجع الحركات جيداً!</p>}
+                </div>
+                 <div className="border-t border-gray-700 pt-4 mt-4 flex justify-end gap-3">
+                    <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors">إغلاق</button>
+                    <button type="button" onClick={() => setCounts({})} className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md transition-colors">مسح</button>
+                    {difference !== 0 && (
+                        <button type="button" onClick={() => onSaveAdjustment(difference, totalCash)} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors">حفظ التسوية</button>
+                    )}
                 </div>
             </div>
         </Modal>
@@ -379,13 +381,14 @@ const EditTransactionModal = ({ isOpen, onClose, onSave, transaction }: EditTran
 
 const TreasuryPage = () => {
     const [transactions, setTransactions] = usePersistentState<Transaction[]>('transactions', []);
+    const [cashCountCounts, setCashCountCounts] = usePersistentState<Record<number, number>>('treasuryCounts', {});
     const [filterText, setFilterText] = useState('');
     const [filterStartDate, setFilterStartDate] = useState('');
     const [filterEndDate, setFilterEndDate] = useState('');
     const [isCashCountOpen, setIsCashCountOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     
-    const { totalIncome, totalExpense, currentBalance, filteredTransactions } = useMemo(() => {
+    const { totalIncome, totalExpense, currentBalance, filteredTransactions, filteredIncome, filteredExpense } = useMemo(() => {
         let income = 0;
         let expense = 0;
         let runningBalance = 0;
@@ -419,11 +422,22 @@ const TreasuryPage = () => {
             const matchesDate = (!start || transactionDate >= start) && (!end || transactionDate <= end);
             
             return matchesText && matchesDate;
-        }).reverse(); // Show newest first
+        });
         
-        return { totalIncome: income, totalExpense: expense, currentBalance: income - expense, filteredTransactions: filtered };
+        const fIncome = filtered.filter(t => t.type === TransactionType.INCOME).reduce((sum, t) => sum + t.amount, 0);
+        const fExpense = filtered.filter(t => t.type === TransactionType.EXPENSE).reduce((sum, t) => sum + t.amount, 0);
+
+        return { 
+            totalIncome: income, 
+            totalExpense: expense, 
+            currentBalance: income - expense, 
+            filteredTransactions: filtered.reverse(), // Show newest first
+            filteredIncome: fIncome,
+            filteredExpense: fExpense
+        };
     }, [transactions, filterText, filterStartDate, filterEndDate]);
 
+    const isFilterActive = filterText !== '' || filterStartDate !== '' || filterEndDate !== '';
 
     const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'>) => {
         const newTransaction: Transaction = {
@@ -447,6 +461,21 @@ const TreasuryPage = () => {
         }
     };
     
+    const handleSaveAdjustment = (difference: number, totalCash: number) => {
+        if (difference === 0) {
+            alert("لا يوجد فرق لتسويته.");
+            return;
+        }
+        const description = `تسوية جرد (${difference > 0 ? 'زيادة' : 'عجز'}) - الرصيد الفعلي ${formatCurrency(totalCash)}`;
+        addTransaction({
+            description: description,
+            amount: Math.abs(difference),
+            type: difference > 0 ? TransactionType.INCOME : TransactionType.EXPENSE
+        });
+        setCashCountCounts({}); // Clear counts after saving
+        setIsCashCountOpen(false); // Close modal
+    };
+
     const handleExport = () => {
       const dataStr = JSON.stringify({ transactions }, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -525,6 +554,23 @@ const TreasuryPage = () => {
                 </div>
             </div>
 
+            {isFilterActive && (
+                <div className="bg-gray-800 p-4 rounded-xl mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 border-2 border-cyan-700/50">
+                    <div className="text-center">
+                        <p className="text-gray-400 text-sm">الوارد بالفلتر</p>
+                        <p className="text-xl font-bold text-green-400">{formatCurrency(filteredIncome)}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-gray-400 text-sm">المنصرف بالفلتر</p>
+                        <p className="text-xl font-bold text-red-400">{formatCurrency(filteredExpense)}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-gray-400 text-sm">صافي الفلتر</p>
+                        <p className="text-xl font-bold text-cyan-400">{formatCurrency(filteredIncome - filteredExpense)}</p>
+                    </div>
+                </div>
+            )}
+
             <div className="overflow-x-auto bg-gray-800 rounded-xl">
                 <table className="w-full text-right">
                     <thead className="bg-gray-700/50">
@@ -557,7 +603,14 @@ const TreasuryPage = () => {
                 </table>
                  {filteredTransactions.length === 0 && <p className="text-center p-8 text-gray-400">لا توجد حركات مطابقة للفلتر.</p>}
             </div>
-            <CashCountModal isOpen={isCashCountOpen} onClose={() => setIsCashCountOpen(false)} systemBalance={currentBalance} />
+            <CashCountModal 
+                isOpen={isCashCountOpen} 
+                onClose={() => setIsCashCountOpen(false)} 
+                systemBalance={currentBalance}
+                counts={cashCountCounts}
+                setCounts={setCashCountCounts}
+                onSaveAdjustment={handleSaveAdjustment}
+            />
             <EditTransactionModal 
                 isOpen={!!editingTransaction} 
                 onClose={() => setEditingTransaction(null)} 
@@ -641,28 +694,13 @@ const EditCustomerTransactionModal = ({ isOpen, onClose, onSave, transaction }: 
 
     useEffect(() => {
         if (transaction) {
-            setAmount(String(Math.abs(transaction.amount)));
+            setAmount(String(transaction.amount));
             setDescription(transaction.description);
         }
     }, [transaction]);
 
     if (!transaction) return null;
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        let finalAmount = parseFloat(amount) || 0;
-        // Logic to determine if it's debt (positive) or payment (negative) can be tricky without an explicit type field.
-        // Let's assume editing keeps the sign, and the user can enter a negative for payment.
-        // A better UI might have a dropdown. For now, we rely on user input.
-        // A simple heuristic: if original was negative, keep new amount negative unless user makes it positive.
-        // This is complex. Let's make it simpler: the user has to enter the correct sign.
-        // But the prompt says "positive for debt, negative for payment". The original could be either.
-        // The original implementation had `setAmount(String(transaction.amount))` which is correct. I'll revert to that.
-        setAmount(String(transaction.amount));
-
-
-    };
+    
      const handleSaveWithCorrectSign = (e: React.FormEvent) => {
         e.preventDefault();
         if(!transaction) return;
