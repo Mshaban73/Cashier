@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>نظام إدارة الخزينة - مؤسسة شعبان التجارية</title>
+    
+    <!-- PWA Manifest for installable app -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJzaG9ydF9uYW1lIjogIuinkuWuneKTouKciCIsInuKciOCAiLAogICJuYW1lIjogIuizsuWuneKciCDYp9mE2LTYsdmBINin2YTYqtis2KfYsSDigJMg2YXYp9mE2YXZgtmKINi52LPYo9mF2Kkg2KfZhNi52YHZiiIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jbklHSnBiV2wwYUNCSWRXSmphR0YwYUNJK1JqQXdNakF3TUNJeEtqRXdNQ2h2Y0dsakx6NDhMM04yWno0PSIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLAogICAgICAic2l6ZXMiOiAiMTkyeDE5MiA1MTJ4NTEyIgogICAgfQogIF0sCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAidGhlbWVfY29vbG9yIjogIiMwNmI2ZDQiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxMTE4MjciCn0=">
+    <meta name="theme-color" content="#06b6d4">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Cairo', sans-serif;
+      }
+      /* Custom scrollbar for better aesthetics */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1f2937; /* bg-gray-800 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #4b5563; /* bg-gray-600 */
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #6b7280; /* bg-gray-500 */
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.525.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^6.24.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-900 text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+
+    <!-- Service Worker & Offline Cache -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          const CACHE_NAME = 'shaban-treasury-cache-v${Date.now()}';
+          const URLS_TO_CACHE = [
+            '/',
+            '/index.html',
+            '/index.css',
+            'https://cdn.tailwindcss.com',
+            'https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap',
+            'https://esm.sh/react@^19.1.0',
+            'https://esm.sh/react-dom@^19.1.0',
+            'https://esm.sh/lucide-react@^0.525.0',
+            'https://esm.sh/react-router-dom@^6.24.0',
+            'https://esm.sh/react@^19.1.0/',
+            'https://esm.sh/react-dom@^19.1.0/'
+          ];
+
+          self.addEventListener('install', (event) => {
+            self.skipWaiting();
+            event.waitUntil(
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  console.log('Opened cache to pre-cache assets.');
+                  const cachePromises = URLS_TO_CACHE.map(urlToCache => {
+                    return cache.add(urlToCache).catch(err => {
+                      console.warn('Failed to cache during install:', urlToCache, err);
+                    });
+                  });
+                  return Promise.all(cachePromises);
+                })
+            );
+          });
+
+          self.addEventListener('fetch', (event) => {
+            if (event.request.method !== 'GET') return;
+
+            event.respondWith(
+              caches.match(event.request)
+                .then((response) => {
+                  if (response) {
+                    return response;
+                  }
+                  
+                  return fetch(event.request).then(
+                    (networkResponse) => {
+                      if (!networkResponse || (networkResponse.status !== 200 && networkResponse.type !== 'opaque')) {
+                         return networkResponse;
+                      }
+
+                      const responseToCache = networkResponse.clone();
+                      caches.open(CACHE_NAME)
+                        .then((cache) => {
+                          cache.put(event.request, responseToCache);
+                        });
+                      return networkResponse;
+                    }
+                  ).catch(err => {
+                    console.error('Fetch failed; returning offline fallback.', err);
+                  });
+                })
+            );
+          });
+
+          self.addEventListener('activate', (event) => {
+            const cacheWhitelist = [CACHE_NAME];
+            event.waitUntil(
+              caches.keys().then((cacheNames) => {
+                return Promise.all(
+                  cacheNames.map((cacheName) => {
+                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                      console.log('Deleting old cache:', cacheName);
+                      return caches.delete(cacheName);
+                    }
+                  })
+                );
+              })
+            );
+          });
+        `;
+        
+        try {
+          const blob = new Blob([swCode], { type: 'application/javascript' });
+          const swUrl = URL.createObjectURL(blob);
+          navigator.serviceWorker.register(swUrl)
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            }).catch(error => {
+              console.log('Service Worker registration failed:', error);
+            });
+        } catch(e) {
+          console.error("Failed to register Service Worker from Blob:", e);
+        }
+      }
+    </script>
+
+    <!-- LocalStorage for saving transactions -->
+    <script>
+      function saveTransactions(data) {
+        localStorage.setItem('transactions', JSON.stringify(data));
+      }
+
+      function loadTransactions() {
+        const saved = localStorage.getItem('transactions');
+        return saved ? JSON.parse(saved) : [];
+      }
+
+      function addTransaction(newTransaction) {
+        const transactions = loadTransactions();
+        transactions.push(newTransaction);
+        saveTransactions(transactions);
+      }
+
+      // Example usage on page load
+      document.addEventListener('DOMContentLoaded', () => {
+        const existing = loadTransactions();
+        console.log("Transactions المحفوظة:", existing);
+
+        // مثال: إضافة حركة جديدة للتجربة
+        // addTransaction({ date: '2025-08-01', amount: 100, desc: 'تجربة' });
+      });
+    </script>
+  </body>
+</html>
