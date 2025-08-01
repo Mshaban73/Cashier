@@ -49,8 +49,11 @@
   <body class="bg-gray-900 text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+<<<<<<< HEAD
 
     <!-- Service Worker & Offline Cache -->
+=======
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
     <script>
       if ('serviceWorker' in navigator) {
         const swCode = `
@@ -58,7 +61,13 @@
           const URLS_TO_CACHE = [
             '/',
             '/index.html',
+<<<<<<< HEAD
             '/index.css',
+=======
+            '/index.tsx',
+            '/App.tsx',
+            '/types.ts',
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
             'https://cdn.tailwindcss.com',
             'https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap',
             'https://esm.sh/react@^19.1.0',
@@ -66,7 +75,11 @@
             'https://esm.sh/lucide-react@^0.525.0',
             'https://esm.sh/react-router-dom@^6.24.0',
             'https://esm.sh/react@^19.1.0/',
+<<<<<<< HEAD
             'https://esm.sh/react-dom@^19.1.0/'
+=======
+            'https://esm.sh/react-dom@^19.1.0/',
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
           ];
 
           self.addEventListener('install', (event) => {
@@ -86,17 +99,34 @@
           });
 
           self.addEventListener('fetch', (event) => {
+<<<<<<< HEAD
             if (event.request.method !== 'GET') return;
 
+=======
+            // We only handle GET requests.
+            if (event.request.method !== 'GET') {
+                return;
+            }
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
             event.respondWith(
               caches.match(event.request)
                 .then((response) => {
                   if (response) {
+<<<<<<< HEAD
                     return response;
                   }
                   
                   return fetch(event.request).then(
                     (networkResponse) => {
+=======
+                    return response; // Serve from cache.
+                  }
+                  
+                  // Not in cache, fetch from network and cache it.
+                  return fetch(event.request).then(
+                    (networkResponse) => {
+                      // We don't cache failed requests.
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
                       if (!networkResponse || (networkResponse.status !== 200 && networkResponse.type !== 'opaque')) {
                          return networkResponse;
                       }
@@ -110,6 +140,10 @@
                     }
                   ).catch(err => {
                     console.error('Fetch failed; returning offline fallback.', err);
+<<<<<<< HEAD
+=======
+                    // Optional: return a custom offline page here.
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
                   });
                 })
             );
@@ -146,6 +180,7 @@
         }
       }
     </script>
+<<<<<<< HEAD
 
     <!-- LocalStorage for saving transactions -->
     <script>
@@ -175,3 +210,7 @@
     </script>
   </body>
 </html>
+=======
+  </body>
+</html>
+>>>>>>> 70fd6cc49a5cab8bf5be8e37fa09afbf0dd8139b
